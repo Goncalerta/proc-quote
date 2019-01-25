@@ -1,0 +1,12 @@
+[package]
+name = "proc-quote"
+version = "0.1.0"
+authors = ["PedroGonçaloCorreia <goncalerta@gmail.com>"]
+license = "MIT/Apache-2.0"
+description = "A procedural macro implementation of quote!."
+edition = "2018"
+
+[dependencies]
+quote = { version = "0.6.11" }
+proc-macro-hack = "0.5.4"
+proc-quote-impl = { path = "./proc-quote-impl" }
