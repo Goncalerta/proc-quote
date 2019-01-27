@@ -20,6 +20,9 @@ pub mod __rt {
     pub fn append_punct(stream: &mut TokenStream, punct: char, spacing: Spacing) {
         stream.append(Punct::new(punct, spacing));
     }
+    pub fn append_lit(stream: &mut TokenStream, lit: Literal) {
+        stream.append(lit);
+    }
     pub fn append_to_tokens<T: ToTokens>(stream: &mut TokenStream, to_tokens: &T) {
         to_tokens.to_tokens(stream);
     }
