@@ -1,5 +1,7 @@
 use proc_macro_hack::proc_macro_hack;
 
+// TODO documentation
+
 #[proc_macro_hack]
 pub use proc_quote_impl::quote;
 
@@ -18,7 +20,7 @@ pub mod __rt {
     pub fn append_punct(stream: &mut TokenStream, punct: char, spacing: Spacing) {
         stream.append(Punct::new(punct, spacing));
     }
-    pub fn append_to_tokens<T: ToTokens>(stream: &mut TokenStream, to_tokens: T) {
+    pub fn append_to_tokens<T: ToTokens>(stream: &mut TokenStream, to_tokens: &T) {
         to_tokens.to_tokens(stream);
     }
     pub fn append_group(stream: &mut TokenStream, inner: TokenStream, delimiter: Delimiter) {
