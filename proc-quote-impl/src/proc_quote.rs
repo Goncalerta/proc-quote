@@ -114,10 +114,10 @@ fn is_asterisk(token: Option<&TokenTree>) -> bool {
 enum InterpolationPattern<'a> {
     /// #ident
     Ident(&'a Ident),
-    /// #{ ... }
-    Expression(&'a Group),
+
     /// #( ... )*
     Iterator(&'a Group),
+
     /// Not an interpolation pattern
     None(&'a Group),
 }
@@ -133,10 +133,6 @@ type InputIter = std::iter::Peekable<token_stream::IntoIter>;
 fn interpolation_pattern_type<'a>(next: &'a TokenTree, input: &mut InputIter) -> InterpolationPattern<'a> {
     match next {
         TokenTree::Ident(ident) => InterpolationPattern::Ident(ident),
-
-        TokenTree::Group(group) if group.delimiter() == Delimiter::Brace => {
-            InterpolationPattern::Expression(group)
-        },
 
         TokenTree::Group(group) if group.delimiter() == Delimiter::Parenthesis => {
             // May be interpolation if followed by *
@@ -160,15 +156,6 @@ fn interpolation_pattern_type<'a>(next: &'a TokenTree, input: &mut InputIter) ->
 fn interpolate_to_tokens_ident(stream: &mut TokenStream, ident: &Ident) {
     stream.append_all(quote! {
         ::proc_quote::__rt::append_to_tokens(&mut __stream, & #ident);
-    });
-}
-
-/// Interpolates the expression inside the group, which should evaluate to 
-/// something that implements `ToTokens`.
-fn interpolate_to_tokens_group(stream: &mut TokenStream, group: &Group) {
-    let inner = group.stream();
-    stream.append_all(quote! {
-        ::proc_quote::__rt::append_to_tokens(&mut __stream, & { #inner });
     });
 }
 
@@ -218,10 +205,6 @@ fn parse_token_stream(input: TokenStream) -> TokenStream {
                             interpolate_to_tokens_ident(&mut output, ident)
                         },
 
-                        InterpolationPattern::Expression(group) => {
-                            interpolate_to_tokens_group(&mut output, group)
-                        },
-
                         InterpolationPattern::Iterator(group) => {
                             interpolate_iterator_group(&mut output, group)
                         },
@@ -261,10 +244,6 @@ fn parse_token_stream_in_iterator_pattern(input: TokenStream, iter_idents: &mut 
                             if !iter_idents.iter().any(|i| i == ident) {
                                 iter_idents.push(ident.clone());
                             }
-                        },
-
-                        InterpolationPattern::Expression(_) => {
-                            panic!("TODO ERROR: Pattern #{ ... } not supported in iterators");
                         },
 
                         InterpolationPattern::Iterator(_) => {
