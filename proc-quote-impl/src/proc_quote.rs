@@ -1,5 +1,5 @@
 use proc_macro2::*;
-use quote::{quote, TokenStreamExt};
+use quote::{quote, ToTokens, TokenStreamExt};
 
 /// Wraps the inner content inside a block with boilerplate to create and return `__stream`.
 fn generate_quote_header(inner: TokenStream) -> TokenStream {
@@ -206,12 +206,12 @@ fn interpolate_iterator_group(stream: &mut TokenStream, group: &Group) {
 
     let output = parse_token_stream_in_iterator_pattern(group.stream(), &mut iter_idents);
 
-    let idents = iter_idents.iter();
-    let idents_in_tuple = match iter_idents.len() {
-        0 => panic!("TODO ERROR: Iterator pattern without iterators inside"),
-        1 => quote! { #(#idents)* },
-        _ => quote! { ( #( #idents ,)* ) },
-    };
+    let mut idents = iter_idents.iter();
+    let first = idents
+        .next()
+        .expect("TODO ERROR: Iterator pattern without iterators inside"); 
+    let first = quote!{ #first };
+    let idents_in_tuple = idents.fold(first, |previous, next| quote!{ (#previous, #next) });
 
     let mut idents = iter_idents.iter();
     let first = idents
