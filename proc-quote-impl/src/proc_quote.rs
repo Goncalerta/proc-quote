@@ -1,5 +1,5 @@
 use proc_macro2::*;
-use quote::{quote, ToTokens, TokenStreamExt};
+use quote::{quote, TokenStreamExt};
 
 /// Wraps the inner content inside a block with boilerplate to create and return `__stream`.
 fn generate_quote_header(inner: TokenStream) -> TokenStream {
@@ -124,71 +124,53 @@ fn parse_group_in_iterator_pattern(
     parse_group_inner(stream, inner, group.delimiter())
 }
 
-/// Returns true if `punct` is a pound sign and `next` is an Ident or a Group.
-///
-/// This is used to check if this may be an interpolation pattern, so as to
-/// decide whether it is safe to call .next() on the input.
-///
-/// Not every pattern that returns true is actually an interpolation
-/// pattern. The complete check is done in `interpolation_pattern_type`.
-fn may_be_interpolation_pattern(punct: &Punct, next: Option<&TokenTree>) -> bool {
-    punct.as_char() == '#'
-        && match next {
-            Some(TokenTree::Ident(_)) | Some(TokenTree::Group(_)) => true,
-            _ => false,
-        }
-}
-
-/// Returns true if the given token is an asterisk.
-/// Used to check the pattern `#(...)*`.
-fn is_asterisk(token: Option<&TokenTree>) -> bool {
-    if let Some(TokenTree::Punct(punct)) = token {
-        punct.as_char() == '*'
-    } else {
-        false
-    }
-}
-
 /// Helper enum for `interpolation_pattern_type`'s return type.
-enum InterpolationPattern<'a> {
+enum InterpolationPattern {
     /// #ident
-    Ident(&'a Ident),
+    Ident(Ident),
 
-    /// #( ... )*
-    Iterator(&'a Group),
+    /// #( group ) token_stream *
+    Iterator(Group, TokenStream),
 
     /// Not an interpolation pattern
-    None(&'a Group),
+    None,
 }
 
 /// Helper type alias for `interpolation_pattern_type`'s input type.
 type InputIter = std::iter::Peekable<token_stream::IntoIter>;
 
-/// Returns the interpolation pattern type based on the content of `next` token
-/// and the rest of the `input`.
-///
-/// It is assumed `may_be_interpolation_pattern` was called first, so the pattern
-/// starts with '#' and `next` is either an `Ident` or a `Group`.
-fn interpolation_pattern_type<'a>(
-    next: &'a TokenTree,
+/// Returns the interpolation pattern type based on the content of the given 
+/// `punct` and the rest of the `input`.
+/// 
+/// Input that is part of the pattern is automatically consumed.
+fn interpolation_pattern_type(
+    punct: &Punct,
     input: &mut InputIter,
-) -> InterpolationPattern<'a> {
-    match next {
-        TokenTree::Ident(ident) => InterpolationPattern::Ident(ident),
-
-        TokenTree::Group(group) if group.delimiter() == Delimiter::Parenthesis => {
-            // May be interpolation if followed by *
-            if is_asterisk(input.peek()) {
-                input.next(); // Drop * from the iterator
-                InterpolationPattern::Iterator(group)
+) -> InterpolationPattern {
+    match (punct.as_char(), input.peek()) {
+        // #ident
+        ('#', Some(TokenTree::Ident(_))) => {
+            if let Some(TokenTree::Ident(ident)) = input.next() {
+                InterpolationPattern::Ident(ident)
             } else {
-                InterpolationPattern::None(group)
+                panic!("guaranteed by previous match")
             }
-        }
+        },
 
-        TokenTree::Group(group) => InterpolationPattern::None(group),
+        // #(group)
+        ('#', Some(TokenTree::Group(group))) if group.delimiter() == Delimiter::Parenthesis => {
+            let inner = match input.next() {
+                Some(TokenTree::Group(inner)) => inner,
+                _ => panic!("guaranteed by previous match"),   
+            };
 
-        _ => panic!("`may_be_interpolation_pattern` should be called before."),
+            let separator = parse_separator(input);
+
+            InterpolationPattern::Iterator(inner, separator)
+        },
+
+        // Not an interpolation pattern
+        _ => InterpolationPattern::None,
     }
 }
 
@@ -201,7 +183,7 @@ fn interpolate_to_tokens_ident(stream: &mut TokenStream, ident: &Ident) {
 
 /// Interpolates the expression inside the group, which should evaluate to
 /// something that implements `ToTokens`.
-fn interpolate_iterator_group(stream: &mut TokenStream, group: &Group) {
+fn interpolate_iterator_group(stream: &mut TokenStream, group: &Group, separator: &TokenStream) {
     let mut iter_idents = Vec::new();
 
     let output = parse_token_stream_in_iterator_pattern(group.stream(), &mut iter_idents);
@@ -220,12 +202,22 @@ fn interpolate_iterator_group(stream: &mut TokenStream, group: &Group) {
     let zip_iterators = quote! {
         #first .into_iter() #(.zip( #idents ))*
     };
-
-    stream.append_all(quote! {
-        for #idents_in_tuple in #zip_iterators {
-            let _ = #output ;
-        }
-    });
+    if separator.is_empty() {
+        stream.append_all(quote! {
+            for #idents_in_tuple in #zip_iterators {
+                #output
+            }
+        });
+    } else {
+        stream.append_all(quote! {
+            for (__i, #idents_in_tuple) in #zip_iterators .enumerate() {
+                if __i > 0 {
+                    #separator
+                }
+                #output
+            }
+        });
+    }
 }
 
 /// Parses the input according to `quote!` rules.
@@ -239,25 +231,16 @@ fn parse_token_stream(input: TokenStream) -> TokenStream {
             TokenTree::Ident(ident) => parse_ident(&mut output, ident),
             TokenTree::Literal(lit) => parse_literal(&mut output, lit),
             TokenTree::Punct(punct) => {
-                if may_be_interpolation_pattern(&punct, input.peek()) {
-                    let next = input.next().expect("is Ident or Group");
-
-                    match interpolation_pattern_type(&next, &mut input) {
-                        InterpolationPattern::Ident(ident) => {
-                            interpolate_to_tokens_ident(&mut output, ident)
-                        }
-
-                        InterpolationPattern::Iterator(group) => {
-                            interpolate_iterator_group(&mut output, group)
-                        }
-
-                        InterpolationPattern::None(group) => {
-                            parse_punct(&mut output, punct);
-                            parse_group(&mut output, group);
-                        }
-                    }
-                } else {
-                    parse_punct(&mut output, punct);
+                match interpolation_pattern_type(&punct, &mut input) {
+                    InterpolationPattern::Ident(ident) => {
+                        interpolate_to_tokens_ident(&mut output, &ident)
+                    },
+                    InterpolationPattern::Iterator(group, separator) => {
+                        interpolate_iterator_group(&mut output, &group, &separator)
+                    },
+                    InterpolationPattern::None => {
+                        parse_punct(&mut output, punct);
+                    },
                 }
             }
         }
@@ -282,34 +265,60 @@ fn parse_token_stream_in_iterator_pattern(
             TokenTree::Ident(ident) => parse_ident(&mut output, ident),
             TokenTree::Literal(lit) => parse_literal(&mut output, lit),
             TokenTree::Punct(punct) => {
-                if may_be_interpolation_pattern(&punct, input.peek()) {
-                    let next = input.next().expect("is Ident or Group");
-
-                    match interpolation_pattern_type(&next, &mut input) {
-                        InterpolationPattern::Ident(ident) => {
-                            interpolate_to_tokens_ident(&mut output, ident);
-                            if !iter_idents.iter().any(|i| i == ident) {
-                                iter_idents.push(ident.clone());
-                            }
+                match interpolation_pattern_type(&punct, &mut input) {
+                    InterpolationPattern::Ident(ident) => {
+                        interpolate_to_tokens_ident(&mut output, &ident);
+                        if !iter_idents.iter().any(|i| i == &ident) {
+                            iter_idents.push(ident);
                         }
-
-                        InterpolationPattern::Iterator(_) => {
-                            panic!("TODO ERROR: Nested iterator patterns not supported");
-                        }
-
-                        InterpolationPattern::None(group) => {
-                            parse_punct(&mut output, punct);
-                            parse_group_in_iterator_pattern(&mut output, group, iter_idents);
-                        }
-                    }
-                } else {
-                    parse_punct(&mut output, punct);
+                    },
+                    InterpolationPattern::Iterator(_, _) => {
+                        panic!("TODO ERROR: Nested iterator patterns not supported");
+                    },
+                    InterpolationPattern::None => {
+                        parse_punct(&mut output, punct);
+                    },
                 }
             }
         }
     }
 
     output
+}
+
+/// Parses the input according to `quote!` rules in an iterator pattern, between 
+/// the parenthesis and the asterisk.
+fn parse_separator(input: &mut InputIter) -> TokenStream {
+    let mut output = TokenStream::new();
+
+    while let Some(token) = input.next() {
+        match &token {
+            TokenTree::Group(group) => parse_group(&mut output, group),
+            TokenTree::Ident(ident) => parse_ident(&mut output, ident),
+            TokenTree::Literal(lit) => parse_literal(&mut output, lit),
+            TokenTree::Punct(punct) => {
+                if punct.as_char() == '*' {
+                    // The asterisk marks the end of the iterator pattern
+                    return output;
+                } else {
+                    match interpolation_pattern_type(&punct, input) {
+                        InterpolationPattern::Ident(ident) => {
+                            // TODO don't allow iterator variables
+                            interpolate_to_tokens_ident(&mut output, &ident)
+                        },
+                        InterpolationPattern::Iterator(_, _) => {
+                            panic!("TODO ERROR: Nested iterator patterns not supported");
+                        },
+                        InterpolationPattern::None => {
+                            parse_punct(&mut output, punct);
+                        },
+                    }
+                }
+            }
+        }
+    }
+
+    panic!("TODO ERROR: EOF before asterisk")
 }
 
 pub fn quote(input: TokenStream) -> TokenStream {
