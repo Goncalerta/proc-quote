@@ -7,7 +7,7 @@ description = "A procedural macro implementation of quote!."
 edition = "2018"
 
 [dependencies]
+proc-quote-impl = { path = "./proc-quote-impl" }
 quote = { version = "0.6.11" }
 proc-macro-hack = "0.5.4"
-proc-quote-impl = { path = "./proc-quote-impl" }
 proc-macro2 = { version = "0.4.26", default-features = false }
