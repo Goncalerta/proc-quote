@@ -372,11 +372,18 @@ fn parse_separator(input: &mut InputIter, iterators_span: Span) -> Result<TokenS
 
 fn parse_span(input: &mut InputIter) -> Result<TokenStream> {
     let mut output = TokenStream::new();
-    
+
+    let span_s = input.peek().map(|token| token.span());
+
     while let Some(token) = input.next() {
         if is_end_span(&token, input) {
-            input.next(); // Drop `>`
-            return Ok(output);
+            let span_e = input.next().expect("guaranteed by if").span();
+            let span_s = span_s.expect("guaranteed inside while");
+            if output.is_empty() {
+                return Err(Error::new(span_s, "No span given before `=>`. Expected `quote_spanned!{ span=> ... }`.").end_span(span_e));
+            } else {
+                return Ok(output);
+            }
         } else {
             output.append(token);
         }
