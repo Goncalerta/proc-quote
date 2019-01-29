@@ -1,8 +1,6 @@
 use proc_macro2::*;
 use quote::{quote, quote_spanned, TokenStreamExt};
 
-
-#[derive(Debug)]
 struct Error {
     span_s: Span,
     span_e: Option<Span>,
@@ -47,22 +45,26 @@ fn generate_quote_header(inner: TokenStream) -> TokenStream {
 
 /// Transforms an `Ident` into code that appends the given `Ident` into `__stream`.
 fn parse_ident(stream: &mut TokenStream, ident: &Ident) {
+    let ref_mut_stream = quote!{ &mut __stream };
+    let span = ident.span();
     let ident = ident.to_string();
-    stream.append_all(quote! {
-        ::proc_quote::__rt::append_ident(&mut __stream, #ident, ::proc_quote::__rt::Span::call_site());
+    stream.append_all(quote_spanned! { span=>
+        ::proc_quote::__rt::append_ident(#ref_mut_stream, #ident, ::proc_quote::__rt::Span::call_site());
     });
 }
 
 /// Transforms a `Punct` into code that appends the given `Punct` into `__stream`.
 fn parse_punct(stream: &mut TokenStream, punct: &Punct) {
+    let ref_mut_stream = quote!{ &mut __stream };
+    let span = punct.span();
     let spacing = punct.spacing();
     let punct = punct.as_char();
     let append = match spacing {
-        Spacing::Alone => quote! {
-            ::proc_quote::__rt::append_punct(&mut __stream, #punct, ::proc_quote::__rt::Spacing::Alone);
+        Spacing::Alone => quote_spanned! { span=>
+            ::proc_quote::__rt::append_punct(#ref_mut_stream, #punct, ::proc_quote::__rt::Spacing::Alone);
         },
-        Spacing::Joint => quote! {
-            ::proc_quote::__rt::append_punct(&mut __stream, #punct, ::proc_quote::__rt::Spacing::Joint);
+        Spacing::Joint => quote_spanned! { span=>
+            ::proc_quote::__rt::append_punct(#ref_mut_stream, #punct, ::proc_quote::__rt::Spacing::Joint);
         },
     };
     stream.append_all(append);
@@ -70,6 +72,8 @@ fn parse_punct(stream: &mut TokenStream, punct: &Punct) {
 
 /// Transforms a `Literal` into code that appends the given `Literal` into `__stream`.
 fn parse_literal(stream: &mut TokenStream, lit: &Literal) {
+    let ref_mut_stream = quote!{ &mut __stream };
+    let span = lit.span();
     let lit_to_string = lit.to_string();
 
     if [
@@ -81,27 +85,27 @@ fn parse_literal(stream: &mut TokenStream, lit: &Literal) {
     {
         // Number with a suffix, char, str, raw char, raw str
         // It should be safe to turn them into tokens
-        stream.append_all(quote! {
-            ::proc_quote::__rt::append_to_tokens(&mut __stream, & #lit);
+        stream.append_all(quote_spanned! { span=>
+            ::proc_quote::__rt::append_to_tokens(#ref_mut_stream, & #lit);
         });
     } else {
         // Integer without suffix, float without suffix
         // Must be more careful, in order for the macro not to assume a wrong suffix
         if let Ok(i) = lit_to_string.parse::<i32>() {
-            stream.append_all(quote! {
-                ::proc_quote::__rt::append_lit(&mut __stream, Literal::i32_unsuffixed(#i));
+            stream.append_all(quote_spanned! { span=>
+                ::proc_quote::__rt::append_lit(#ref_mut_stream, Literal::i32_unsuffixed(#i));
             });
         } else if let Ok(i) = lit_to_string.parse::<i64>() {
-            stream.append_all(quote! {
-                ::proc_quote::__rt::append_lit(&mut __stream, Literal::i64_unsuffixed(#i));
+            stream.append_all(quote_spanned! { span=>
+                ::proc_quote::__rt::append_lit(#ref_mut_stream, Literal::i64_unsuffixed(#i));
             });
         } else if let Ok(u) = lit_to_string.parse::<u64>() {
-            stream.append_all(quote! {
-                ::proc_quote::__rt::append_lit(&mut __stream, Literal::u64_unsuffixed(#u));
+            stream.append_all(quote_spanned! { span=>
+                ::proc_quote::__rt::append_lit(#ref_mut_stream, Literal::u64_unsuffixed(#u));
             });
         } else if let Ok(f) = lit_to_string.parse::<f64>() {
-            stream.append_all(quote! {
-                ::proc_quote::__rt::append_lit(&mut __stream, Literal::f64_unsuffixed(#f));
+            stream.append_all(quote_spanned! { span=>
+                ::proc_quote::__rt::append_lit(#ref_mut_stream, Literal::f64_unsuffixed(#f));
             });
         } else {
             // This should never show up
@@ -111,7 +115,8 @@ fn parse_literal(stream: &mut TokenStream, lit: &Literal) {
 }
 
 /// Logic common to `parse_group` and `parse_group_in_iterator_pattern`.
-fn parse_group_inner(stream: &mut TokenStream, inner: TokenStream, delimiter: Delimiter) {
+fn parse_group_inner(stream: &mut TokenStream, inner: TokenStream, delimiter: Delimiter, group_span: Span) {
+    let ref_mut_stream = quote!{ &mut __stream };
     let delimiter = match delimiter {
         Delimiter::Parenthesis => quote! {
             ::proc_quote::__rt::Delimiter::Parenthesis
@@ -127,8 +132,8 @@ fn parse_group_inner(stream: &mut TokenStream, inner: TokenStream, delimiter: De
         },
     };
 
-    stream.append_all(quote! {
-        ::proc_quote::__rt::append_group(&mut __stream, #inner, #delimiter);
+    stream.append_all(quote_spanned! { group_span =>
+        ::proc_quote::__rt::append_group(#ref_mut_stream, #inner, #delimiter);
     });
 }
 
@@ -139,7 +144,7 @@ fn parse_group(stream: &mut TokenStream, group: &Group) -> Result<()> {
     let inner = parse_token_stream(group.stream())?;
     let inner = generate_quote_header(inner);
 
-    Ok(parse_group_inner(stream, inner, group.delimiter()))
+    Ok(parse_group_inner(stream, inner, group.delimiter(), group.span()))
 }
 
 /// Transforms a `Group` into code that appends the given `Group` into `__stream`.
@@ -154,7 +159,7 @@ fn parse_group_in_iterator_pattern(
     let inner = parse_token_stream_in_iterator_pattern(group.stream(), iter_idents)?;
     let inner = generate_quote_header(inner);
 
-    Ok(parse_group_inner(stream, inner, group.delimiter()))
+    Ok(parse_group_inner(stream, inner, group.delimiter(), group.span()))
 }
 
 /// Helper enum for `interpolation_pattern_type`'s return type.
@@ -209,8 +214,10 @@ fn interpolation_pattern_type(
 
 /// Interpolates the given variable, which should implement `ToTokens`.
 fn interpolate_to_tokens_ident(stream: &mut TokenStream, ident: &Ident) {
-    stream.append_all(quote! {
-        ::proc_quote::__rt::append_to_tokens(&mut __stream, & #ident);
+    let ref_mut_stream = quote!{ &mut __stream };
+    let span = ident.span();
+    stream.append_all(quote_spanned! { span=>
+        ::proc_quote::__rt::append_to_tokens(#ref_mut_stream, & #ident);
     });
 }
 
@@ -234,18 +241,17 @@ fn interpolate_iterator_group(stream: &mut TokenStream, group: &Group, separator
         Some(first) => first,
         None => return Err(Error::new(group.span(), "Expected at least one iterator inside pattern.")),
     };
-    let zip_iterators = quote! {
-        #first .into_iter() #(.zip( #idents ))*
-    };
+    let first_into_iter = quote_spanned!(first.span()=> #first .into_iter());
+    let zip_iterators = idents.map(|ident| quote_spanned! { ident.span()=> .zip( #ident .into_iter() ) });
     if separator.is_empty() {
         stream.append_all(quote! {
-            for #idents_in_tuple in #zip_iterators {
+            for #idents_in_tuple in #first_into_iter #(#zip_iterators)* {
                 #output
             }
         });
     } else {
         stream.append_all(quote! {
-            for (__i, #idents_in_tuple) in #zip_iterators .enumerate() {
+            for (__i, #idents_in_tuple) in #first_into_iter #(#zip_iterators)* .enumerate() {
                 if __i > 0 {
                     #separator
                 }
