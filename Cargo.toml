@@ -2,8 +2,12 @@
 name = "proc-quote"
 version = "0.1.0"
 authors = ["PedroGonçaloCorreia <goncalerta@gmail.com>"]
-license = "MIT/Apache-2.0"
 description = "A procedural macro implementation of quote!."
+license = "MIT/Apache-2.0"
+readme = "README.md"
+keywords = ["syn", "quote", "proc-macro"]
+categories = ["development-tools::procedural-macro-helpers"]
+repository = "https://github.com/Goncalerta/proc-quote"
 edition = "2018"
 
 [dependencies]
