@@ -1,6 +1,9 @@
 use proc_macro2::*;
 use quote::{quote, quote_spanned, TokenStreamExt};
 
+/// Error struct for this crate. This error can be raised
+/// into a `TokenStream` that calls `compile_error!` with
+/// the given message, at the given span.
 struct Error {
     span_s: Span,
     span_e: Option<Span>,
@@ -8,15 +11,21 @@ struct Error {
 }
 
 impl Error {
+    /// Creates a new Error at the given span with the given
+    /// message.
     fn new(span: Span, msg: &'static str) -> Self {
         Self { span_s: span, span_e: None, msg }
     }
 
+    /// Sets the end of the span of this error. The start of
+    /// the span is set in `Error::new`.
     fn end_span(mut self, span: Span) -> Self {
         self.span_e = Some(span);
         self
     }
 
+    /// Raises into a `TokenStream` that calls `compile_error!` 
+    /// with the given message, at the given span.
     fn raise(self) -> TokenStream {
         let Error{span_s, span_e, msg} = self;
 
@@ -30,6 +39,7 @@ impl Error {
     }
 }
 
+/// Type alias for results in this crate.
 type Result<T> = std::result::Result<T, Error>; 
 
 /// Wraps the inner content inside a block with boilerplate to create and return `__stream`.
@@ -249,6 +259,8 @@ fn interpolate_iterator_group(stream: &mut TokenStream, group: &Group, separator
     Ok(())
 }
 
+/// Returns true if the next tokens are jointed '=>', the pattern that separates
+/// the span from the template in `quote_spanned!` macro.
 fn is_end_span(token: &TokenTree, input: &mut InputIter) -> bool {
     match token {
         TokenTree::Punct(punct) => {
@@ -370,6 +382,7 @@ fn parse_separator(input: &mut InputIter, iterators_span: Span) -> Result<TokenS
     Err(Error::new(iterators_span, "Iterating interpolation does not have `*` symbol."))
 }
 
+/// Parses the span given in `quote_spanned!`, before '=>'.
 fn parse_span(input: &mut InputIter) -> Result<TokenStream> {
     let mut output = TokenStream::new();
 
