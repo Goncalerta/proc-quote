@@ -115,7 +115,7 @@ fn parse_literal(stream: &mut TokenStream, lit: &Literal) {
 }
 
 /// Logic common to `parse_group` and `parse_group_in_iterator_pattern`.
-fn parse_group_inner(stream: &mut TokenStream, inner: TokenStream, delimiter: Delimiter, group_span: Span) {
+fn parse_group_base(stream: &mut TokenStream, inner: TokenStream, delimiter: Delimiter, group_span: Span) {
     let ref_mut_stream = quote!{ &mut __stream };
     let delimiter = match delimiter {
         Delimiter::Parenthesis => quote! {
@@ -144,7 +144,7 @@ fn parse_group(stream: &mut TokenStream, group: &Group) -> Result<()> {
     let inner = parse_token_stream(group.stream())?;
     let inner = generate_quote_header(inner);
 
-    Ok(parse_group_inner(stream, inner, group.delimiter(), group.span()))
+    Ok(parse_group_base(stream, inner, group.delimiter(), group.span()))
 }
 
 /// Transforms a `Group` into code that appends the given `Group` into `__stream`.
@@ -159,7 +159,7 @@ fn parse_group_in_iterator_pattern(
     let inner = parse_token_stream_in_iterator_pattern(group.stream(), iter_idents)?;
     let inner = generate_quote_header(inner);
 
-    Ok(parse_group_inner(stream, inner, group.delimiter(), group.span()))
+    Ok(parse_group_base(stream, inner, group.delimiter(), group.span()))
 }
 
 /// Helper enum for `interpolation_pattern_type`'s return type.
