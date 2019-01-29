@@ -14,4 +14,8 @@ pub fn quote(input: TokenStream) -> TokenStream {
     proc_quote::quote(input.into()).into()
 }
 
-// TODO quote_spanned!
+#[doc(hidden)]
+#[proc_macro_hack]
+pub fn quote_spanned(input: TokenStream) -> TokenStream {
+    proc_quote::quote_spanned(input.into()).into()
+}
