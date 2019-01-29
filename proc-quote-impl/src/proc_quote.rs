@@ -90,43 +90,9 @@ fn parse_literal(stream: &mut TokenStream, lit: &Literal) {
     let span = lit.span();
     let lit_to_string = lit.to_string();
 
-    if [
-        "u8", "u16", "u32", "u64", "u128", "usize", "i8", "i16", "i32", "i64", "i128", "isize",
-        "f32", "f64", "\"", "\'", "#",
-    ]
-    .iter()
-    .any(|suffix| lit_to_string.ends_with(suffix))
-    {
-        // TODO SET LIT_SPAN
-        // Number with a suffix, char, str, raw char, raw str
-        // It should be safe to turn them into tokens
-        stream.append_all(quote_spanned! { span=>
-            ::proc_quote::__rt::append_to_tokens(#ref_mut_stream, & #lit);
-        });
-    } else {
-        // Integer without suffix, float without suffix
-        // Must be more careful, in order for the macro not to assume a wrong suffix
-        if let Ok(i) = lit_to_string.parse::<i32>() {
-            stream.append_all(quote_spanned! { span=>
-                ::proc_quote::__rt::append_lit(#ref_mut_stream, Literal::i32_unsuffixed(#i), #requested_span);
-            });
-        } else if let Ok(i) = lit_to_string.parse::<i64>() {
-            stream.append_all(quote_spanned! { span=>
-                ::proc_quote::__rt::append_lit(#ref_mut_stream, Literal::i64_unsuffixed(#i), #requested_span);
-            });
-        } else if let Ok(u) = lit_to_string.parse::<u64>() {
-            stream.append_all(quote_spanned! { span=>
-                ::proc_quote::__rt::append_lit(#ref_mut_stream, Literal::u64_unsuffixed(#u), #requested_span);
-            });
-        } else if let Ok(f) = lit_to_string.parse::<f64>() {
-            stream.append_all(quote_spanned! { span=>
-                ::proc_quote::__rt::append_lit(#ref_mut_stream, Literal::f64_unsuffixed(#f), #requested_span);
-            });
-        } else {
-            // This should never show up
-            panic!("Unable to parse this literal. Please, fill in an issue in `proc-macro`'s repository.");
-        }
-    }
+    stream.append_all(quote_spanned!{ span=>
+        ::proc_quote::__rt::append_stringified_tokens(#ref_mut_stream, #lit_to_string, #requested_span); 
+    });
 }
 
 /// Logic common to `parse_group` and `parse_group_in_iterator_pattern`.

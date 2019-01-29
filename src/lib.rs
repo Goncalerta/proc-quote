@@ -19,19 +19,25 @@ pub mod __rt {
     pub fn append_ident(stream: &mut TokenStream, ident: &str, span: Span) {
         stream.append(Ident::new(ident, span));
     }
+
     pub fn append_punct(stream: &mut TokenStream, punct: char, spacing: Spacing, span: Span) {
         let mut punct = Punct::new(punct, spacing);
         punct.set_span(span);
         stream.append(punct);
     }
-    pub fn append_lit(stream: &mut TokenStream, lit: Literal, span: Span) {
-        let mut lit = lit;
-        lit.set_span(span);
-        stream.append(lit);
+
+    pub fn append_stringified_tokens(stream: &mut TokenStream, s: &str, span: Span) {
+        let s: TokenStream = s.parse().expect("invalid token stream");
+        stream.extend(s.into_iter().map(|mut t| {
+            t.set_span(span);
+            t
+        }));
     }
+    
     pub fn append_to_tokens<T: ToTokens>(stream: &mut TokenStream, to_tokens: &T) {
         to_tokens.to_tokens(stream);
     }
+    
     pub fn append_group(
         stream: &mut TokenStream,
         inner: TokenStream,
