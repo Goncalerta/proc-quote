@@ -1,12 +1,18 @@
 Rust Quasi-Quoting
 ==================
 
-This crate implements the `quote!` macro as a procedural macro, instead of 
+[![Latest Version](https://img.shields.io/crates/v/proc-quote.svg)](https://crates.io/crates/proc-quote)
+[![Rust Documentation](https://img.shields.io/badge/api-rustdoc-blue.svg)](https://docs.rs/proc-quote/0/proc_quote/macro.quote.html)
+
+This crate implements the [`quote!`] macro as a procedural macro, instead of 
 [the original `quote!` macro](https://github.com/dtolnay/quote), implemented 
 with `macro_rules!`.
 
-The `quote!` macro turns Rust syntax tree data structures into tokens of 
+The [`quote!`] macro turns Rust syntax tree data structures into tokens of 
 source code.
+
+[`quote!`]: https://docs.rs/proc-quote/0/proc_quote/macro.quote.html
+[`quote_spanned!`]: https://docs.rs/proc-quote/0/proc_quote/macro.quote_spanned.html
 
 Procedural macros in Rust receive a stream of tokens as input, execute arbitrary
 Rust code to determine how to manipulate those tokens, and produce a stream of
@@ -201,15 +207,16 @@ are spanned with [`Span::call_site()`].
 
 [`Span::call_site()`]: https://docs.rs/proc-macro2/0.4/proc_macro2/struct.Span.html#method.call_site
 
-A different span can be provided explicitly through the `quote_spanned!`
+A different span can be provided explicitly through the [`quote_spanned!`]
 macro.
 
 ### Limitations
 
 - A non-repeating variable may not be interpolated inside of a repeating block
-  ([dtolnay/quote#7]).
+  ([dtolnay/quote#7]) ([#4]).
 
-[#7]: https://github.com/dtolnay/quote/issues/7
+[dtolnay/quote#7]: https://github.com/dtolnay/quote/issues/7
+[#4]: https://github.com/Goncalerta/proc-quote/issues/4
 
 ## License
 
