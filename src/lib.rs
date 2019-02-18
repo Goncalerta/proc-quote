@@ -408,11 +408,11 @@ pub mod __rt {
             t
         }));
     }
-    
+
     pub fn append_to_tokens<T: ToTokens>(stream: &mut TokenStream, to_tokens: &T) {
         to_tokens.to_tokens(stream);
     }
-    
+
     pub fn append_group(
         stream: &mut TokenStream,
         inner: TokenStream,
