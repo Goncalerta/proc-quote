@@ -1,6 +1,7 @@
 Rust Quasi-Quoting
 ==================
 
+[![Build Status](https://travis-ci.org/Goncalerta/proc-quote.svg?branch=master)](https://travis-ci.org/Goncalerta/proc-quote)
 [![Latest Version](https://img.shields.io/crates/v/proc-quote.svg)](https://crates.io/crates/proc-quote)
 [![Rust Documentation](https://img.shields.io/badge/api-rustdoc-blue.svg)](https://docs.rs/proc-quote/0/proc_quote/macro.quote.html)
 
