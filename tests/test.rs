@@ -1,11 +1,10 @@
 extern crate proc_macro2;
-#[macro_use]
 extern crate proc_quote;
 
 use std::borrow::Cow;
 
 use proc_macro2::{Ident, Span, TokenStream};
-use proc_quote::TokenStreamExt;
+use proc_quote::{quote, TokenStreamExt};
 
 mod conditional {
     #[cfg(integer128)]
