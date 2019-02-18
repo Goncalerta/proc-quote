@@ -216,19 +216,17 @@ fn test_fancy_repetition() {
 }
 
 #[test]
-#[ignore] // TODO(#5)
 fn test_nested_fancy_repetition() {
-    unimplemented!("doesn't compile")
-    // let nested = vec![vec!['a', 'b', 'c'], vec!['x', 'y', 'z']];
+    let nested = vec![vec!['a', 'b', 'c'], vec!['x', 'y', 'z']];
 
-    // let tokens = quote! {
-    //     #(
-    //         #(#nested)*
-    //     ),*
-    // };
+    let tokens = quote! {
+        #(
+            #(#nested)*
+        ),*
+    };
 
-    // let expected = "'a' 'b' 'c' , 'x' 'y' 'z'";
-    // assert_eq!(expected, tokens.to_string());
+    let expected = "'a' 'b' 'c' , 'x' 'y' 'z'";
+    assert_eq!(expected, tokens.to_string());
 }
 
 #[test]

@@ -218,7 +218,9 @@ fn interpolate_to_tokens_ident(stream: &mut TokenStream, ident: &Ident) {
 
 /// Interpolates the expression inside the group, which should evaluate to
 /// something that implements `ToTokens`.
-fn interpolate_iterator_group(stream: &mut TokenStream, group: &Group, separator: &TokenStream) -> Result<()> {
+/// 
+/// Returns the vector of idents that were called inside the iterator.
+fn interpolate_iterator_group(stream: &mut TokenStream, group: &Group, separator: &TokenStream) -> Result<Vec<Ident>> {
     let mut iter_idents = Vec::new();
 
     let mut inner = group.stream().into_iter().peekable();
@@ -256,7 +258,7 @@ fn interpolate_iterator_group(stream: &mut TokenStream, group: &Group, separator
         });
     }
 
-    Ok(())
+    Ok(iter_idents)
 }
 
 /// Returns true if the next tokens are jointed '=>', the pattern that separates
@@ -291,10 +293,10 @@ fn parse_token_stream(input: &mut InputIter) -> Result<TokenStream> {
             TokenTree::Punct(punct) => {
                 match interpolation_pattern_type(&punct, input)? {
                     InterpolationPattern::Ident(ident) => {
-                        interpolate_to_tokens_ident(&mut output, &ident)
+                        interpolate_to_tokens_ident(&mut output, &ident);
                     },
                     InterpolationPattern::Iterator(group, separator) => {
-                        interpolate_iterator_group(&mut output, &group, &separator)?
+                        interpolate_iterator_group(&mut output, &group, &separator)?;
                     },
                     InterpolationPattern::None => {
                         parse_punct(&mut output, punct);
@@ -330,9 +332,11 @@ fn parse_token_stream_in_iterator_pattern(
                         }
                     },
                     InterpolationPattern::Iterator(group, separator) => {
-                        let span_s = group.span();
-                        let span_e = separator.into_iter().last().map(|s| s.span()).unwrap_or(span_s);
-                        return Err(Error::new(span_s, "Nested iterator patterns not supported.").end_span(span_e));
+                        for ident in interpolate_iterator_group(&mut output, &group, &separator)? {
+                            if !iter_idents.iter().any(|i| i == &ident) {
+                                iter_idents.push(ident);
+                            }   
+                        }
                     },
                     InterpolationPattern::None => {
                         parse_punct(&mut output, punct);
@@ -368,7 +372,7 @@ fn parse_separator(input: &mut InputIter, iterators_span: Span) -> Result<TokenS
                         InterpolationPattern::Iterator(group, separator) => {
                             let span_s = group.span();
                             let span_e = separator.into_iter().last().map(|s| s.span()).unwrap_or(span_s);
-                            return Err(Error::new(span_s, "Nested iterator patterns not supported.").end_span(span_e));
+                            return Err(Error::new(span_s, "Iterator patterns not supported inside separators.").end_span(span_e));
                         },
                         InterpolationPattern::None => {
                             parse_punct(&mut output, punct);
