@@ -292,3 +292,10 @@ fn test_append_tokens() {
     a.append_all(b);
     assert_eq!("a b", a.to_string());
 }
+
+#[test]
+fn test_interpolate_same_variable_twice_repetition() {
+    let a = vec![1, 2, 3];
+    let b = quote!{ #(#a #a)* };
+    assert_eq!("1i32 1i32 2i32 2i32 3i32 3i32", b.to_string());
+}
