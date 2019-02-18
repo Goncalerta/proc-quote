@@ -1,5 +1,6 @@
 use proc_macro2::*;
 use quote::{quote, quote_spanned, TokenStreamExt};
+use std::collections::BTreeSet;
 
 /// Error struct for this crate. This error can be raised
 /// into a `TokenStream` that calls `compile_error!` with
@@ -148,7 +149,7 @@ fn parse_group(stream: &mut TokenStream, group: &Group) -> Result<()> {
 fn parse_group_in_iterator_pattern(
     stream: &mut TokenStream,
     group: &Group,
-    iter_idents: &mut Vec<Ident>,
+    iter_idents: &mut BTreeSet<Ident>,
 ) -> Result<()> {
     let mut inner = group.stream().into_iter().peekable();
     let inner = parse_token_stream_in_iterator_pattern(&mut inner, iter_idents)?;
@@ -220,8 +221,8 @@ fn interpolate_to_tokens_ident(stream: &mut TokenStream, ident: &Ident) {
 /// something that implements `ToTokens`.
 /// 
 /// Returns the vector of idents that were called inside the iterator.
-fn interpolate_iterator_group(stream: &mut TokenStream, group: &Group, separator: &TokenStream) -> Result<Vec<Ident>> {
-    let mut iter_idents = Vec::new();
+fn interpolate_iterator_group(stream: &mut TokenStream, group: &Group, separator: &TokenStream) -> Result<BTreeSet<Ident>> {
+    let mut iter_idents = BTreeSet::new();
 
     let mut inner = group.stream().into_iter().peekable();
     let output = parse_token_stream_in_iterator_pattern(&mut inner, &mut iter_idents)?;
@@ -312,7 +313,7 @@ fn parse_token_stream(input: &mut InputIter) -> Result<TokenStream> {
 /// Parses the input according to `quote!` rules inside an iterator pattern.
 fn parse_token_stream_in_iterator_pattern(
     input: &mut InputIter,
-    iter_idents: &mut Vec<Ident>,
+    iter_idents: &mut BTreeSet<Ident>,
 ) -> Result<TokenStream> {
     let mut output = TokenStream::new();
 
@@ -327,16 +328,10 @@ fn parse_token_stream_in_iterator_pattern(
                 match interpolation_pattern_type(&punct, input)? {
                     InterpolationPattern::Ident(ident) => {
                         interpolate_to_tokens_ident(&mut output, &ident);
-                        if !iter_idents.iter().any(|i| i == &ident) {
-                            iter_idents.push(ident);
-                        }
+                        iter_idents.insert(ident);
                     },
                     InterpolationPattern::Iterator(group, separator) => {
-                        for ident in interpolate_iterator_group(&mut output, &group, &separator)? {
-                            if !iter_idents.iter().any(|i| i == &ident) {
-                                iter_idents.push(ident);
-                            }   
-                        }
+                        iter_idents.append(&mut interpolate_iterator_group(&mut output, &group, &separator)?);
                     },
                     InterpolationPattern::None => {
                         parse_punct(&mut output, punct);
