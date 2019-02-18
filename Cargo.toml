@@ -14,4 +14,4 @@ edition = "2018"
 proc-quote-impl = { version = "0.1.0", path = "./proc-quote-impl" }
 quote = "0.6.11" 
 proc-macro-hack = "0.5.4"
-proc-macro2 = { version = "0.4.26", default-features = false }
+proc-macro2 = { version = "0.4.27", default-features = false }
