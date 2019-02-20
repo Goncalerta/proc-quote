@@ -1,6 +1,6 @@
 [package]
 name = "proc-quote"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["PedroGonçaloCorreia <goncalerta@gmail.com>"]
 description = "A procedural macro implementation of quote!."
 license = "MIT/Apache-2.0"
@@ -11,7 +11,7 @@ repository = "https://github.com/Goncalerta/proc-quote"
 edition = "2018"
 
 [dependencies]
-proc-quote-impl = { version = "0.1.0", path = "./proc-quote-impl" }
+proc-quote-impl = { version = "0.1.1", path = "./proc-quote-impl" }
 quote = "0.6.11" 
 proc-macro-hack = "0.5.4"
 proc-macro2 = { version = "0.4.27", default-features = false }
