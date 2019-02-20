@@ -93,7 +93,6 @@ fn test_box_str() {
     assert_eq!("\"str\"", tokens.to_string());
 }
 
-
 #[test]
 fn test_cow() {
     let owned: Cow<Ident> = Cow::Owned(Ident::new("owned", Span::call_site()));

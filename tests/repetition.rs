@@ -71,6 +71,6 @@ fn test_var_name_conflict() {
 #[test]
 fn test_repetition_same_var_twice() {
     let a = vec![1, 2, 3];
-    let b = quote!{ #(#a #a)* };
+    let b = quote! { #(#a #a)* };
     assert_eq!("1i32 1i32 2i32 2i32 3i32 3i32", b.to_string());
 }

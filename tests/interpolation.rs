@@ -41,7 +41,6 @@ fn test_substitution() {
     assert_eq!(expected, tokens.to_string());
 }
 
-
 #[test]
 fn test_advanced() {
     let generics = quote!( <'a, T> );
