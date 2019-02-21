@@ -26,6 +26,16 @@ fn test_quote_impl() {
 }
 
 #[test]
+fn test_var_name_conflict() {
+    // The implementation of `quote!` uses the variable `__stream` but it should be
+    // fine, if a little confusing when debugging.
+    let __stream = 'a';
+    let tokens = quote! { #__stream };
+    let expected = "'a'";
+    assert_eq!(expected, tokens.to_string());
+}
+
+#[test]
 fn test_empty_quote() {
     let tokens = quote!();
     assert_eq!("", tokens.to_string());
