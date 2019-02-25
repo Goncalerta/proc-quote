@@ -1,4 +1,4 @@
-Rust Quasi-Quoting
+Rust Quasiquoter
 ==================
 
 [![Build Status](https://travis-ci.org/Goncalerta/proc-quote.svg?branch=master)](https://travis-ci.org/Goncalerta/proc-quote)
@@ -29,18 +29,107 @@ that as code into the current crate, we can treat it as data, pass it around,
 mutate it, and eventually hand it back to the compiler as tokens to compile into
 the macro caller's crate.
 
-This crate is motivated by the procedural macro use case, but is a
-general-purpose Rust quasi-quoting library and is not specific to procedural
-macros.
+This crate is motivated by the procedural macro use case, but it is a general-purpose 
+Rust quasi-quoting library and is not specific to procedural macros.
 
-## Interpolate the same variable twice in a repeating block
+# Why use proc-quote?
 
-In the original [`quote!` macro](https://github.com/dtolnay/quote), inside
-repeating blocks, the same iterator could not be passed in more than once.
-In other words, while `quote! { #a #a }` worked, `quote! { #(#a #a)* }` did not.
+This crate serves the same purpose as [`quote`](https://crates.io/crates/quote)
+however it is implemented with procedural macros rather than `macro_rules!`. Switching 
+from `quote` to the `proc_quote` crate **should not require any change in the code in most cases**.
 
-However, in this procedural macro implementation of `quote!`, both are possible 
-and work as intended.
+Besides, opting to `proc_quote` has the advantage of **lifting some of the limitations**
+of the original quasi-quoting crate:
+- Interpolate a `ToTokens` variable inside of a repeating block
+- Interpolate the same `Iterator` more than once inside of the same repeating block 
+- Use `Vec`, arrays and slices in a repeating block without consuming the variable
+
+### Interpolate a `ToTokens` variable inside of a repeating block
+
+In `proc_quote`, this is now possible:
+```rust
+let i = 1..5; // Iterator<ToTokens> 
+let a = "a"; // ToTokens
+
+let q = quote! {
+    #(#i #a)*
+};
+assert_eq!("1i32 \"a\" 2i32 \"a\" 3i32 \"a\" 4i32 \"a\"", q.to_string());
+```
+
+You may interpolate variables implementing `ToTokens` inside repeating blocks.
+The variable will be interpolated in every iteration.
+
+### Interpolate the same `Iterator` more than once inside of the same repeating block 
+
+In the original `quote!` macro, the same iterator could not be interpolated more than 
+once in repeating blocks. In other words, for `a: impl Iterator<ToTokens>`, 
+`quote!( #(#a #a)* )` didn't work.
+
+This is fixed in `proc-quote`.
+
+### Use `Vec`, arrays and slices in a repeating block without consuming the variable
+
+In `proc-quote`, any type that implements `Borrow<[T]>` inside a repeating pattern
+will iterate without consuming the variable (using the `.iter` method). This includes
+`Vec`, arrays and slices.
+
+This means you no longer need to create ten different variables to iterate the same
+elements in ten different places in your `quote!` macros.
+
+## From `quote` to `proc-quote`
+
+If you are already using the `quote` crate but you want to leverage the advantages of
+`proc-quote`, you can easily switch crates.
+
+After changing your `Cargo.toml` dependency, change the following:
+```rust
+extern crate quote;
+use quote::quote;
+use quote::quote_spanned;
+```
+respectively into:
+```rust
+extern crate proc_quote;
+use proc_quote::quote;
+use proc_quote::quote_spanned;
+```
+
+And that's basically it, most of the times! 
+
+However, repeating patterns `#(...)*` **do NOT** work directly with [`IntoIterator`]
+in `proc-quote` (see [`Repeat`] trait). If your type was already an `Iterator` or any
+type implementing <a href="https://doc.rust-lang.org/std/borrow/trait.Borrow.html">
+`Borrow<[T]>`</a> (such as [`Vec`], slices, arrays, ...), your code will work the same 
+as in `quote.`
+
+On the other hand, cases like [`TokenStream`] (implements `IntoIterator` but it is
+not any of the cases stated above) must be explicitely turned into iterators before
+being interpolated. That is, if you had:
+
+```rust
+let a: TokenStream = /* ... */; 
+let q = quote!(#(#a)*);
+```
+
+You must change it to:
+
+```rust
+let a: TokenStream = /* ... */;
+let a = a.into_iter(); 
+let q = quote!(#(#a)*);
+```
+
+This explicitness is necessary because of `proc-quote`'s new features. In this example,
+`TokenStream` would have be seen as a type implementing `ToTokens` instead of an `Iterator`
+of tokens, which makes sense because it is much more frequently used as the former when
+interpolated.
+
+[`Repeat`]: https://docs.rs/proc-quote/0/proc_quote/trait.Repeat.html
+[`Iterator<T>`]: https://doc.rust-lang.org/std/iter/trait.Iterator.html
+[`Vec`]: https://doc.rust-lang.org/std/vec/struct.Vec.html
+[`ToTokens`]: https://docs.rs/proc-quote/0/proc_quote/trait.ToTokens.html
+[`IntoIterator`]: https://doc.rust-lang.org/std/iter/trait.IntoIterator.html
 
 
 ## Syntax
@@ -49,13 +138,13 @@ The quote crate provides a `quote!` macro within which you can write Rust code
 that gets packaged into a [`TokenStream`] and can be treated as data. You should
 think of `TokenStream` as representing a fragment of Rust source code.
 
-[`TokenStream`]: https://docs.rs/proc-macro2/0.4/proc_macro2/struct.TokenStream.html
+[`TokenStream`]: https://docs.rs/proc-macro2/0/proc_macro2/struct.TokenStream.html
 
 Within the `quote!` macro, interpolation is done with `#var`. Any type
 implementing the [`quote::ToTokens`] trait can be interpolated. This includes
 most Rust primitive types as well as most of the syntax tree types from [`syn`].
 
-[`quote::ToTokens`]: https://docs.rs/quote/0.6/quote/trait.ToTokens.html
+[`quote::ToTokens`]: https://docs.rs/proc-quote/0/proc_quote/trait.ToTokens.html
 [`syn`]: https://github.com/dtolnay/syn
 
 ```rust
@@ -85,9 +174,7 @@ let tokens = quote! {
 
 Repetition is done using `#(...)*` or `#(...),*` similar to `macro_rules!`. This
 iterates through the elements of any variable interpolated within the repetition
-and inserts a copy of the repetition body for each one. The variables in an
-interpolation may be anything that implements `IntoIterator`, including `Vec` or
-a pre-existing iterator.
+and inserts a copy of the repetition body for each one. 
 
 - `#(#var)*` — no separators
 - `#(#var),*` — the character before the asterisk is used as a separator
@@ -99,11 +186,39 @@ Note that there is a difference between `#(#var ,)*` and `#(#var),*`—the latte
 does not produce a trailing comma. This matches the behavior of delimiters in
 `macro_rules!`.
 
+The [`proc_quote::Repeat`](https://docs.rs/proc-quote/0/proc_quote/trait.Repeat.html) 
+trait defines which types are allowed to be interpolated inside a repition pattern.
+
+Which types *do* `Repeat`:
+  - [`Iterator<T>`] consumes the iterator, iterating through every element.
+  - <a href="https://doc.rust-lang.org/std/borrow/trait.Borrow.html">`Borrow<[T]>`</a> 
+(includes [`Vec`], [`array`], and [`slice`]) iterates with the [`slice::iter`] method, 
+thus not consuming the original data.
+  - [`ToTokens`], interpolates the variable in every iteration.
+
+Which types *do NOT* `Repeat`:
+  - [`IntoIterator`], to avoid ambiguity (Ex. "Which behavior would have been used for [`Vec`], 
+which implements both [`IntoIterator`] and <a href="https://doc.rust-lang.org/std/borrow/trait.Borrow.html">
+`Borrow<[T]>`</a>?"; "Which behavior would have been used for [`TokenStream`], which implements both 
+[`IntoIterator`] and [`ToTokens`]?"). To use the iterator, you may call [`IntoIterator::into_iter`] 
+explicitly.
+  - Ambiguous types that implement at least two of the `Repeat` traits. In the very unlikely case 
+this happens, disambiguate the type by wrapping it under some structure that only implements the 
+trait you desire to use.
+
+[`Iterator<T>`]: https://doc.rust-lang.org/std/iter/trait.Iterator.html
+[`Vec`]: https://doc.rust-lang.org/std/vec/struct.Vec.html
+[`array`]: https://doc.rust-lang.org/std/primitive.array.html
+[`slice`]: https://doc.rust-lang.org/std/slice/index.html
+[`slice::iter`]: https://doc.rust-lang.org/std/primitive.slice.html#method.iter
+[`ToTokens`]: https://docs.rs/proc-quote/0/proc_quote/trait.ToTokens.html
+[`IntoIterator`]: https://doc.rust-lang.org/std/iter/trait.IntoIterator.html
+[`IntoIterator::into_iter`]: https://doc.rust-lang.org/std/iter/trait.IntoIterator.html#tymethod.into_iter
+
 ## Returning tokens to the compiler
 
-The `quote!` macro evaluates to an expression of type
-`proc_macro2::TokenStream`. Meanwhile Rust procedural macros are expected to
-return the type `proc_macro::TokenStream`.
+The `quote!` macro evaluates to an expression of type `proc_macro2::TokenStream`. 
+Meanwhile Rust procedural macros are expected to return the type `proc_macro::TokenStream`.
 
 The difference between the two types is that `proc_macro` types are entirely
 specific to procedural macros and cannot ever exist in code outside of a
@@ -206,18 +321,10 @@ Any interpolated tokens preserve the `Span` information provided by their
 `ToTokens` implementation. Tokens that originate within a `quote!` invocation
 are spanned with [`Span::call_site()`].
 
-[`Span::call_site()`]: https://docs.rs/proc-macro2/0.4/proc_macro2/struct.Span.html#method.call_site
+[`Span::call_site()`]: https://docs.rs/proc-macro2/0/proc_macro2/struct.Span.html#method.call_site
 
 A different span can be provided explicitly through the [`quote_spanned!`]
 macro.
-
-### Limitations
-
-- A non-repeating variable may not be interpolated inside of a repeating block
-  ([dtolnay/quote#7]) ([#4]).
-
-[dtolnay/quote#7]: https://github.com/dtolnay/quote/issues/7
-[#4]: https://github.com/Goncalerta/proc-quote/issues/4
 
 ## License
 

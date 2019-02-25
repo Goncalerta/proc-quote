@@ -17,7 +17,7 @@
 //! it around, mutate it, and eventually hand it back to the compiler as tokens
 //! to compile into the macro caller's crate.
 //!
-//! This crate is motivated by the procedural macro use case, but is a
+//! This crate is motivated by the procedural macro use case, but it is a
 //! general-purpose Rust quasi-quoting library and is not specific to procedural
 //! macros.
 //!
@@ -78,7 +78,7 @@ pub use quote::TokenStreamExt;
 /// [`TokenStream`]. For returning tokens to the compiler in a procedural macro, use
 /// `into()` to build a `TokenStream`.
 ///
-/// [`TokenStream`]: https://docs.rs/proc-macro2/0.4/proc_macro2/struct.TokenStream.html
+/// [`TokenStream`]: https://docs.rs/proc-macro2/0/proc_macro2/struct.TokenStream.html
 ///
 /// # Interpolation
 ///
@@ -94,9 +94,8 @@ pub use quote::TokenStreamExt;
 ///
 /// Repetition is done using `#(...)*` or `#(...),*` again similar to
 /// `macro_rules!`. This iterates through the elements of any variable
-/// interpolated within the repetition and inserts a copy of the repetition body
-/// for each one. The variables in an interpolation may be anything that
-/// implements `IntoIterator`, including `Vec` or a pre-existing iterator.
+/// interpolated within the repetition and inserts a copy of the repetition
+/// body for each one.
 ///
 /// - `#(#var)*` — no separators
 /// - `#(#var),*` — the character before the asterisk is used as a separator
@@ -104,13 +103,42 @@ pub use quote::TokenStreamExt;
 /// - `#( #k => println!("{}", #v), )*` — even multiple interpolations
 /// - `#(let #var = self.#var;)*` - the same variable can be used more than once
 ///
+/// The [`proc_quote::Repeat`](https://docs.rs/proc-quote/0/proc_quote/trait.Repeat.html)
+/// trait defines which types are allowed to be interpolated inside a repition pattern.
+///
+/// Which types that implement the following traits *do* `Repeat`:
+///   - [`Iterator<T>`] consumes the iterator, iterating through every element.
+///   - <a href="https://doc.rust-lang.org/std/borrow/trait.Borrow.html">`Borrow<[T]>`</a>
+/// (includes [`Vec`], [`array`], and [`slice`]) iterates with the [`slice::iter`] method,
+/// thus not consuming the original data.
+///   - [`ToTokens`], interpolates the variable in every iteration.
+///
+/// Which types *do NOT* `Repeat`:
+///   - [`IntoIterator`], to avoid ambiguity (Ex. "Which behavior would have been used for [`Vec`],
+/// which implements both [`IntoIterator`] and <a href="https://doc.rust-lang.org/std/borrow/trait.Borrow.html">
+/// `Borrow<[T]>`</a>?"; "Which behavior would have been used for [`TokenStream`], which implements both
+/// [`IntoIterator`] and [`ToTokens`]?"). To use the iterator, you may call [`IntoIterator::into_iter`]
+/// explicitly.
+///   - Ambiguous types that implement at least two of the `Repeat` traits. In the very unlikely case
+/// this happens, disambiguate the type by wrapping it under some structure that only implements the
+/// trait you desire to use.
+///
+/// [`Iterator<T>`]: https://doc.rust-lang.org/std/iter/trait.Iterator.html
+/// [`Vec`]: https://doc.rust-lang.org/std/vec/struct.Vec.html
+/// [`array`]: https://doc.rust-lang.org/std/primitive.array.html
+/// [`slice`]: https://doc.rust-lang.org/std/slice/index.html
+/// [`slice::iter`]: https://doc.rust-lang.org/std/primitive.slice.html#method.iter
+/// [`ToTokens`]: https://docs.rs/proc-quote/0/proc_quote/trait.ToTokens.html
+/// [`IntoIterator`]: https://doc.rust-lang.org/std/iter/trait.IntoIterator.html
+/// [`IntoIterator::into_iter`]: https://doc.rust-lang.org/std/iter/trait.IntoIterator.html#tymethod.into_iter
+///
 /// # Hygiene
 ///
 /// Any interpolated tokens preserve the `Span` information provided by their
 /// `ToTokens` implementation. Tokens that originate within the `quote!`
 /// invocation are spanned with [`Span::call_site()`].
 ///
-/// [`Span::call_site()`]: https://docs.rs/proc-macro2/0.4/proc_macro2/struct.Span.html#method.call_site
+/// [`Span::call_site()`]: https://docs.rs/proc-macro2/0/proc_macro2/struct.Span.html#method.call_site
 ///
 /// A different span can be provided through the [`quote_spanned!`] macro.
 ///
