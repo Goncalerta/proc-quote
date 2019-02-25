@@ -95,6 +95,9 @@ use proc_quote::quote;
 use proc_quote::quote_spanned;
 ```
 
+**Note:** You may also remove `#![recursion_limit="..."]` as it is not needed in the
+procedural macro.
+
 And that's basically it, most of the times! 
 
 However, repeating patterns `#(...)*` **do NOT** work directly with [`IntoIterator`]
