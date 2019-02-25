@@ -24,14 +24,6 @@ fn test_repetition_simple() {
 }
 
 #[test]
-#[ignore] // TODO(#6)
-fn test_repetition_no_vars() {
-    unimplemented!("doesn't compile")
-    // let tokens = quote!(#(a b)* #(c d),*);
-    // assert_eq!("", tokens.to_string());
-}
-
-#[test]
 fn test_repetition_two_vars() {
     let foo = vec!["a", "b"];
     let bar = vec![true, false];
