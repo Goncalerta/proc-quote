@@ -367,7 +367,7 @@ fn parse_separator(input: &mut InputIter, iterators_span: Span) -> Result<TokenS
                 } else {
                     match interpolation_pattern_type(&punct, input)? {
                         InterpolationPattern::Ident(ident) => {
-                            // TODO don't allow iterator variables
+                            // TODO(#1) don't allow iterator variables
                             interpolate_to_tokens_ident(&mut output, &ident)
                         },
                         InterpolationPattern::Iterator(group, separator) => {
