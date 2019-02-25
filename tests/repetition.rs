@@ -63,7 +63,9 @@ fn test_var_name_conflict() {
     // The implementation of `#(...),*` uses the variable `__i` but it should be
     // fine, if a little confusing when debugging.
     let __i = vec!['a', 'b'];
-    let tokens = quote! { #(#__i),* };
+    let tokens = quote! {
+        #(#__i),*
+    };
     let expected = "'a' , 'b'";
     assert_eq!(expected, tokens.to_string());
 }

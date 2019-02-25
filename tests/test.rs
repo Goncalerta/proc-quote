@@ -30,7 +30,7 @@ fn test_var_name_conflict() {
     // The implementation of `quote!` uses the variable `__stream` but it should be
     // fine, if a little confusing when debugging.
     let __stream = 'a';
-    let tokens = quote! { #__stream };
+    let tokens = quote!( #__stream );
     let expected = "'a'";
     assert_eq!(expected, tokens.to_string());
 }
@@ -57,8 +57,8 @@ fn test_closure() {
 
     let fields = (0usize..3)
         .map(field_i as fn(_) -> _)
-        .map(|var| quote! { #var });
+        .map(|var| quote!( #var ));
 
-    let tokens = quote! { #(#fields)* };
+    let tokens = quote!( #(#fields)* );
     assert_eq!("__field0 __field1 __field2", tokens.to_string());
 }

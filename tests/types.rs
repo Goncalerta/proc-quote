@@ -89,7 +89,7 @@ fn test_string() {
 #[test]
 fn test_box_str() {
     let b = "str".to_owned().into_boxed_str();
-    let tokens = quote! { #b };
+    let tokens = quote!( #b );
     assert_eq!("\"str\"", tokens.to_string());
 }
 
@@ -100,6 +100,6 @@ fn test_cow() {
     let ident = Ident::new("borrowed", Span::call_site());
     let borrowed = Cow::Borrowed(&ident);
 
-    let tokens = quote! { #owned #borrowed };
+    let tokens = quote!( #owned #borrowed );
     assert_eq!("owned borrowed", tokens.to_string());
 }
