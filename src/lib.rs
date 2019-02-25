@@ -66,6 +66,9 @@
 //! ```
 use proc_macro_hack::proc_macro_hack;
 
+mod repeat;
+
+pub use self::repeat::*;
 pub use quote::ToTokens;
 pub use quote::TokenStreamExt;
 

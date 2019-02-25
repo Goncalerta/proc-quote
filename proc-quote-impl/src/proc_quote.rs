@@ -240,21 +240,27 @@ fn interpolate_iterator_group(stream: &mut TokenStream, group: &Group, separator
         Some(first) => first,
         None => return Err(Error::new(group.span(), "Expected at least one iterator inside pattern.")),
     };
-    let first_into_iter = quote_spanned!(first.span()=> #first .into_iter());
-    let zip_iterators = idents.map(|ident| quote_spanned! { ident.span()=> .zip( #ident .into_iter() ) });
+    let first_into_iter = quote_spanned!(first.span()=> #first .__proc_quote__as_repeat() );
+    let zip_iterators = idents.map(|ident| quote_spanned! { ident.span()=> .zip( #ident .__proc_quote__as_repeat() ) });
     if separator.is_empty() {
-        stream.append_all(quote! {
-            for #idents_in_tuple in #first_into_iter #(#zip_iterators)* {
-                #output
+        stream.append_all(quote! { 
+            {
+                use ::proc_quote::Repeat;
+                for #idents_in_tuple in #first_into_iter #(#zip_iterators)* {
+                    #output
+                }
             }
         });
     } else {
         stream.append_all(quote! {
-            for (__i, #idents_in_tuple) in #first_into_iter #(#zip_iterators)* .enumerate() {
-                if __i > 0 {
-                    #separator
+            {
+                use ::proc_quote::Repeat;
+                for (__i, #idents_in_tuple) in #first_into_iter #(#zip_iterators)* .enumerate() {
+                    if __i > 0 {
+                        #separator
+                    }
+                    #output
                 }
-                #output
             }
         });
     }
