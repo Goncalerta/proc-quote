@@ -15,7 +15,11 @@ impl Error {
     /// Creates a new Error at the given span with the given
     /// message.
     fn new(span: Span, msg: &'static str) -> Self {
-        Self { span_s: span, span_e: None, msg }
+        Self {
+            span_s: span,
+            span_e: None,
+            msg,
+        }
     }
 
     /// Sets the end of the span of this error. The start of
@@ -25,29 +29,33 @@ impl Error {
         self
     }
 
-    /// Raises into a `TokenStream` that calls `compile_error!` 
+    /// Raises into a `TokenStream` that calls `compile_error!`
     /// with the given message, at the given span.
     fn raise(self) -> TokenStream {
-        let Error{span_s, span_e, msg} = self;
+        let Error {
+            span_s,
+            span_e,
+            msg,
+        } = self;
 
-        let compile_error = quote_spanned!{ span_s=>
+        let compile_error = quote_spanned! { span_s=>
             compile_error!(#msg)
         };
 
-        quote_spanned!{ span_e.unwrap_or(span_s)=>
+        quote_spanned! { span_e.unwrap_or(span_s)=>
             #compile_error ;
         }
     }
 }
 
 /// Type alias for results in this crate.
-type Result<T> = std::result::Result<T, Error>; 
+type Result<T> = std::result::Result<T, Error>;
 
 /// Wraps the inner content inside a block with boilerplate to create and return `__stream`.
 /// If `requested_span` is some, an aditional `let __span = ...;` line is added before `inner`.
 fn generate_quote_header(inner: TokenStream, requested_span: Option<TokenStream>) -> TokenStream {
     let requested_span = if let Some(requested_span) = requested_span {
-        quote!{ let __span = #requested_span; }
+        quote! { let __span = #requested_span; }
     } else {
         TokenStream::new()
     };
@@ -64,8 +72,8 @@ fn generate_quote_header(inner: TokenStream, requested_span: Option<TokenStream>
 
 /// Transforms an `Ident` into code that appends the given `Ident` into `__stream`.
 fn parse_ident(stream: &mut TokenStream, ident: &Ident) {
-    let ref_mut_stream = quote!{ &mut __stream };
-    let requested_span = quote!{ __span };
+    let ref_mut_stream = quote! { &mut __stream };
+    let requested_span = quote! { __span };
 
     let span = ident.span();
     let ident = ident.to_string();
@@ -76,8 +84,8 @@ fn parse_ident(stream: &mut TokenStream, ident: &Ident) {
 
 /// Transforms a `Punct` into code that appends the given `Punct` into `__stream`.
 fn parse_punct(stream: &mut TokenStream, punct: &Punct) {
-    let ref_mut_stream = quote!{ &mut __stream };
-    let requested_span = quote!{ __span };
+    let ref_mut_stream = quote! { &mut __stream };
+    let requested_span = quote! { __span };
 
     let span = punct.span();
     let spacing = punct.spacing();
@@ -95,21 +103,26 @@ fn parse_punct(stream: &mut TokenStream, punct: &Punct) {
 
 /// Transforms a `Literal` into code that appends the given `Literal` into `__stream`.
 fn parse_literal(stream: &mut TokenStream, lit: &Literal) {
-    let ref_mut_stream = quote!{ &mut __stream };
-    let requested_span = quote!{ __span };
+    let ref_mut_stream = quote! { &mut __stream };
+    let requested_span = quote! { __span };
 
     let span = lit.span();
     let lit_to_string = lit.to_string();
 
     stream.append_all(quote_spanned!{ span=>
-        ::proc_quote::__rt::append_stringified_tokens(#ref_mut_stream, #lit_to_string, #requested_span); 
+        ::proc_quote::__rt::append_stringified_tokens(#ref_mut_stream, #lit_to_string, #requested_span);
     });
 }
 
 /// Logic common to `parse_group` and `parse_group_in_iterator_pattern`.
-fn parse_group_base(stream: &mut TokenStream, inner: TokenStream, delimiter: Delimiter, group_span: Span) {
-    let ref_mut_stream = quote!{ &mut __stream };
-    let requested_span = quote!{ __span };
+fn parse_group_base(
+    stream: &mut TokenStream,
+    inner: TokenStream,
+    delimiter: Delimiter,
+    group_span: Span,
+) {
+    let ref_mut_stream = quote! { &mut __stream };
+    let requested_span = quote! { __span };
 
     let delimiter = match delimiter {
         Delimiter::Parenthesis => quote! {
@@ -139,7 +152,12 @@ fn parse_group(stream: &mut TokenStream, group: &Group) -> Result<()> {
     let inner = parse_token_stream(&mut inner)?;
     let inner = generate_quote_header(inner, None);
 
-    Ok(parse_group_base(stream, inner, group.delimiter(), group.span()))
+    Ok(parse_group_base(
+        stream,
+        inner,
+        group.delimiter(),
+        group.span(),
+    ))
 }
 
 /// Transforms a `Group` into code that appends the given `Group` into `__stream`.
@@ -155,7 +173,12 @@ fn parse_group_in_iterator_pattern(
     let inner = parse_token_stream_in_iterator_pattern(&mut inner, iter_idents)?;
     let inner = generate_quote_header(inner, None);
 
-    Ok(parse_group_base(stream, inner, group.delimiter(), group.span()))
+    Ok(parse_group_base(
+        stream,
+        inner,
+        group.delimiter(),
+        group.span(),
+    ))
 }
 
 /// Helper enum for `interpolation_pattern_type`'s return type.
@@ -173,9 +196,9 @@ enum InterpolationPattern {
 /// Alias for common iterator passed to the parsing functions.
 type InputIter = std::iter::Peekable<token_stream::IntoIter>;
 
-/// Returns the interpolation pattern type based on the content of the given 
+/// Returns the interpolation pattern type based on the content of the given
 /// `punct` and the rest of the `input`.
-/// 
+///
 /// Input that is part of the pattern is automatically consumed.
 fn interpolation_pattern_type(
     punct: &Punct,
@@ -189,19 +212,19 @@ fn interpolation_pattern_type(
             } else {
                 panic!("guaranteed by previous match")
             }
-        },
+        }
 
         // #(group)
         ('#', Some(TokenTree::Group(group))) if group.delimiter() == Delimiter::Parenthesis => {
             let inner = match input.next() {
                 Some(TokenTree::Group(inner)) => inner,
-                _ => panic!("guaranteed by previous match"),   
+                _ => panic!("guaranteed by previous match"),
             };
 
             let separator = parse_separator(input, inner.span())?;
 
             Ok(InterpolationPattern::Iterator(inner, separator))
-        },
+        }
 
         // Not an interpolation pattern
         _ => Ok(InterpolationPattern::None),
@@ -210,7 +233,7 @@ fn interpolation_pattern_type(
 
 /// Interpolates the given variable, which should implement `ToTokens`.
 fn interpolate_to_tokens_ident(stream: &mut TokenStream, ident: &Ident) {
-    let ref_mut_stream = quote!{ &mut __stream };
+    let ref_mut_stream = quote! { &mut __stream };
     let span = ident.span();
     stream.append_all(quote_spanned! { span=>
         ::proc_quote::__rt::append_to_tokens(#ref_mut_stream, & #ident);
@@ -219,9 +242,13 @@ fn interpolate_to_tokens_ident(stream: &mut TokenStream, ident: &Ident) {
 
 /// Interpolates the expression inside the group, which should evaluate to
 /// something that implements `ToTokens`.
-/// 
+///
 /// Returns the vector of idents that were called inside the iterator.
-fn interpolate_iterator_group(stream: &mut TokenStream, group: &Group, separator: &TokenStream) -> Result<BTreeSet<Ident>> {
+fn interpolate_iterator_group(
+    stream: &mut TokenStream,
+    group: &Group,
+    separator: &TokenStream,
+) -> Result<BTreeSet<Ident>> {
     let mut iter_idents = BTreeSet::new();
 
     let mut inner = group.stream().into_iter().peekable();
@@ -230,20 +257,31 @@ fn interpolate_iterator_group(stream: &mut TokenStream, group: &Group, separator
     let mut idents = iter_idents.iter();
     let first = match idents.next() {
         Some(first) => first,
-        None => return Err(Error::new(group.span(), "Expected at least one iterator inside pattern.")),
+        None => {
+            return Err(Error::new(
+                group.span(),
+                "Expected at least one iterator inside pattern.",
+            ));
+        }
     };
-    let first = quote!{ #first };
-    let idents_in_tuple = idents.fold(first, |previous, next| quote!{ (#previous, #next) });
+    let first = quote! { #first };
+    let idents_in_tuple = idents.fold(first, |previous, next| quote! { (#previous, #next) });
 
     let mut idents = iter_idents.iter();
     let first = match idents.next() {
         Some(first) => first,
-        None => return Err(Error::new(group.span(), "Expected at least one iterator inside pattern.")),
+        None => {
+            return Err(Error::new(
+                group.span(),
+                "Expected at least one iterator inside pattern.",
+            ));
+        }
     };
     let first_into_iter = quote_spanned!(first.span()=> #first .__proc_quote__as_repeat() );
-    let zip_iterators = idents.map(|ident| quote_spanned! { ident.span()=> .zip( #ident .__proc_quote__as_repeat() ) });
+    let zip_iterators = idents
+        .map(|ident| quote_spanned! { ident.span()=> .zip( #ident .__proc_quote__as_repeat() ) });
     if separator.is_empty() {
-        stream.append_all(quote! { 
+        stream.append_all(quote! {
             {
                 use ::proc_quote::Repeat;
                 for #idents_in_tuple in #first_into_iter #(#zip_iterators)* {
@@ -277,13 +315,13 @@ fn is_end_span(token: &TokenTree, input: &mut InputIter) -> bool {
                 match input.peek() {
                     Some(TokenTree::Punct(punct)) => {
                         punct.as_char() == '>' && punct.spacing() == Spacing::Alone
-                    },
+                    }
                     _ => false,
                 }
-            } else { 
-                false 
+            } else {
+                false
             }
-        },
+        }
         _ => false,
     }
 }
@@ -297,19 +335,17 @@ fn parse_token_stream(input: &mut InputIter) -> Result<TokenStream> {
             TokenTree::Group(group) => parse_group(&mut output, group)?,
             TokenTree::Ident(ident) => parse_ident(&mut output, ident),
             TokenTree::Literal(lit) => parse_literal(&mut output, lit),
-            TokenTree::Punct(punct) => {
-                match interpolation_pattern_type(&punct, input)? {
-                    InterpolationPattern::Ident(ident) => {
-                        interpolate_to_tokens_ident(&mut output, &ident);
-                    },
-                    InterpolationPattern::Iterator(group, separator) => {
-                        interpolate_iterator_group(&mut output, &group, &separator)?;
-                    },
-                    InterpolationPattern::None => {
-                        parse_punct(&mut output, punct);
-                    },
+            TokenTree::Punct(punct) => match interpolation_pattern_type(&punct, input)? {
+                InterpolationPattern::Ident(ident) => {
+                    interpolate_to_tokens_ident(&mut output, &ident);
                 }
-            }
+                InterpolationPattern::Iterator(group, separator) => {
+                    interpolate_iterator_group(&mut output, &group, &separator)?;
+                }
+                InterpolationPattern::None => {
+                    parse_punct(&mut output, punct);
+                }
+            },
         }
     }
 
@@ -330,27 +366,29 @@ fn parse_token_stream_in_iterator_pattern(
             }
             TokenTree::Ident(ident) => parse_ident(&mut output, ident),
             TokenTree::Literal(lit) => parse_literal(&mut output, lit),
-            TokenTree::Punct(punct) => {
-                match interpolation_pattern_type(&punct, input)? {
-                    InterpolationPattern::Ident(ident) => {
-                        interpolate_to_tokens_ident(&mut output, &ident);
-                        iter_idents.insert(ident);
-                    },
-                    InterpolationPattern::Iterator(group, separator) => {
-                        iter_idents.append(&mut interpolate_iterator_group(&mut output, &group, &separator)?);
-                    },
-                    InterpolationPattern::None => {
-                        parse_punct(&mut output, punct);
-                    },
+            TokenTree::Punct(punct) => match interpolation_pattern_type(&punct, input)? {
+                InterpolationPattern::Ident(ident) => {
+                    interpolate_to_tokens_ident(&mut output, &ident);
+                    iter_idents.insert(ident);
                 }
-            }
+                InterpolationPattern::Iterator(group, separator) => {
+                    iter_idents.append(&mut interpolate_iterator_group(
+                        &mut output,
+                        &group,
+                        &separator,
+                    )?);
+                }
+                InterpolationPattern::None => {
+                    parse_punct(&mut output, punct);
+                }
+            },
         }
     }
 
     Ok(output)
 }
 
-/// Parses the input according to `quote!` rules in an iterator pattern, between 
+/// Parses the input according to `quote!` rules in an iterator pattern, between
 /// the parenthesis and the asterisk.
 fn parse_separator(input: &mut InputIter, iterators_span: Span) -> Result<TokenStream> {
     let mut output = TokenStream::new();
@@ -369,22 +407,33 @@ fn parse_separator(input: &mut InputIter, iterators_span: Span) -> Result<TokenS
                         InterpolationPattern::Ident(ident) => {
                             // TODO(#1) don't allow iterator variables
                             interpolate_to_tokens_ident(&mut output, &ident)
-                        },
+                        }
                         InterpolationPattern::Iterator(group, separator) => {
                             let span_s = group.span();
-                            let span_e = separator.into_iter().last().map(|s| s.span()).unwrap_or(span_s);
-                            return Err(Error::new(span_s, "Iterator patterns not supported inside separators.").end_span(span_e));
-                        },
+                            let span_e = separator
+                                .into_iter()
+                                .last()
+                                .map(|s| s.span())
+                                .unwrap_or(span_s);
+                            return Err(Error::new(
+                                span_s,
+                                "Iterator patterns not supported inside separators.",
+                            )
+                            .end_span(span_e));
+                        }
                         InterpolationPattern::None => {
                             parse_punct(&mut output, punct);
-                        },
+                        }
                     }
                 }
             }
         }
     }
 
-    Err(Error::new(iterators_span, "Iterating interpolation does not have `*` symbol."))
+    Err(Error::new(
+        iterators_span,
+        "Iterating interpolation does not have `*` symbol.",
+    ))
 }
 
 /// Parses the span given in `quote_spanned!`, before '=>'.
@@ -398,7 +447,11 @@ fn parse_span(input: &mut InputIter) -> Result<TokenStream> {
             let span_e = input.next().expect("guaranteed by if").span();
             let span_s = span_s.expect("guaranteed inside while");
             if output.is_empty() {
-                return Err(Error::new(span_s, "No span given before `=>`. Expected `quote_spanned!{ span=> ... }`.").end_span(span_e));
+                return Err(Error::new(
+                    span_s,
+                    "No span given before `=>`. Expected `quote_spanned!{ span=> ... }`.",
+                )
+                .end_span(span_e));
             } else {
                 return Ok(output);
             }
@@ -406,13 +459,16 @@ fn parse_span(input: &mut InputIter) -> Result<TokenStream> {
             output.append(token);
         }
     }
-    
-    Err(Error::new(Span::call_site(), "Could not find `=>`. Expected `quote_spanned!{ span=> ... }`."))
+
+    Err(Error::new(
+        Span::call_site(),
+        "Could not find `=>`. Expected `quote_spanned!{ span=> ... }`.",
+    ))
 }
 
 pub fn quote(input: TokenStream) -> TokenStream {
     let mut input = input.into_iter().peekable();
-    let span = quote!{ ::proc_quote::__rt::Span::call_site() };
+    let span = quote! { ::proc_quote::__rt::Span::call_site() };
     match parse_token_stream(&mut input) {
         Ok(output) => generate_quote_header(output, Some(span)),
         Err(err) => return err.raise(),
