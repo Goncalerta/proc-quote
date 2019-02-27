@@ -10,6 +10,9 @@ categories = ["development-tools::procedural-macro-helpers"]
 repository = "https://github.com/Goncalerta/proc-quote"
 edition = "2018"
 
+[workspace]
+members = [ "proc-quote-impl" ]
+
 [dependencies]
 proc-quote-impl = { version = "0.2.0", path = "./proc-quote-impl" }
 quote = "0.6.11" 
