@@ -62,3 +62,10 @@ fn test_closure() {
     let tokens = quote!( #(#fields)* );
     assert_eq!("__field0 __field1 __field2", tokens.to_string());
 }
+
+#[test]
+fn test_raw_ident() {
+    let tokens = quote!(r#struct r#the);
+    let expected = "r#struct r#the";
+    assert_eq!(expected, tokens.to_string());
+}

@@ -18,6 +18,10 @@ proc-quote-impl = { version = "0.2.0", path = "./proc-quote-impl" }
 quote = "0.6.11" 
 proc-macro-hack = "0.5.4"
 proc-macro2 = { version = "0.4.27", default-features = false }
+# TODO(blocked on rust-lang/rust#54723)
+# https://github.com/rust-lang/rust/issues/54723
+# Remove syn dependency once `new_raw` is stabilized
+syn = "0.15.30"
 
 [badges]
 travis-ci = { repository = "Goncalerta/proc-quote" }

@@ -78,7 +78,7 @@ fn parse_ident(stream: &mut TokenStream, ident: &Ident) {
     let span = ident.span();
     let ident = ident.to_string();
     stream.append_all(quote_spanned! { span=>
-        ::proc_quote::__rt::append_ident(#ref_mut_stream, #ident, #requested_span );
+        ::proc_quote::__rt::append_ident(#ref_mut_stream, #ident, #requested_span);
     });
 }
 

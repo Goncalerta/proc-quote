@@ -423,7 +423,17 @@ pub mod __rt {
     pub use proc_macro2::*;
 
     pub fn append_ident(stream: &mut TokenStream, ident: &str, span: Span) {
-        stream.append(Ident::new(ident, span));
+        // TODO(blocked on rust-lang/rust#54723)
+        // https://github.com/rust-lang/rust/issues/54723
+        // Use `new_raw` once it's stabilized
+        // stream.append(Ident::new_raw(ident, span));
+        match syn::parse_str::<Ident>(ident) {
+            Ok(mut ident) => {
+                ident.set_span(span);
+                stream.append(ident);
+            }
+            Err(_) => stream.append(Ident::new(ident, span)),
+        }
     }
 
     pub fn append_punct(stream: &mut TokenStream, punct: char, spacing: Spacing, span: Span) {
