@@ -15,7 +15,7 @@ members = [ "proc-quote-impl" ]
 
 [dependencies]
 proc-quote-impl = { version = "0.2.1", path = "./proc-quote-impl" }
-quote = "0.6.11" 
+quote = "0.6.12"
 proc-macro-hack = "0.5.4"
 proc-macro2 = { version = "0.4.27", default-features = false }
 # TODO(blocked on rust-lang/rust#54723)
