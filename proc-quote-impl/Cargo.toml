@@ -16,4 +16,4 @@ proc-macro = true
 [dependencies]
 quote = { version = "0.6.12" }
 proc-macro-hack = "0.5.4"
-proc-macro2 = { version = "0.4.27", default-features = false }
+proc-macro2 = { version = "1.0.0", default-features = false }

@@ -17,7 +17,7 @@ members = [ "proc-quote-impl" ]
 proc-quote-impl = { version = "0.2.2", path = "./proc-quote-impl" }
 quote = "0.6.12"
 proc-macro-hack = "0.5.4"
-proc-macro2 = { version = "0.4.27", default-features = false }
+proc-macro2 = { version = "1.0.0", default-features = false }
 # TODO(blocked on rust-lang/rust#54723)
 # https://github.com/rust-lang/rust/issues/54723
 # Remove syn dependency once `new_raw` is stabilized
