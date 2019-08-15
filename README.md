@@ -32,55 +32,11 @@ the macro caller's crate.
 This crate is motivated by the procedural macro use case, but it is a general-purpose 
 Rust quasi-quoting library and is not specific to procedural macros.
 
-# Why use proc-quote?
+## From `quote` to `proc-quote`
 
 This crate serves the same purpose as [`quote`](https://crates.io/crates/quote)
 however it is implemented with procedural macros rather than `macro_rules!`. Switching 
-from `quote` to the `proc_quote` crate **should not require any change in the code in most cases**.
-
-Besides, opting to `proc_quote` has the advantage of **lifting some of the limitations**
-of the original quasi-quoting crate:
-- Interpolate a `ToTokens` variable inside of a repeating block
-- Interpolate the same `Iterator` more than once inside of the same repeating block 
-- Use `Vec`, arrays and slices in a repeating block without consuming the variable
-
-### Interpolate a `ToTokens` variable inside of a repeating block
-
-In `proc_quote`, this is now possible:
-```rust
-let i = 1..5; // Iterator<ToTokens> 
-let a = "a"; // ToTokens
-
-let q = quote! {
-    #(#i #a)*
-};
-assert_eq!("1i32 \"a\" 2i32 \"a\" 3i32 \"a\" 4i32 \"a\"", q.to_string());
-```
-
-You may interpolate variables implementing `ToTokens` inside repeating blocks.
-The variable will be interpolated in every iteration.
-
-### Interpolate the same `Iterator` more than once inside of the same repeating block 
-
-In the original `quote!` macro, the same iterator could not be interpolated more than 
-once in repeating blocks. In other words, for `a: impl Iterator<ToTokens>`, 
-`quote!( #(#a #a)* )` didn't work.
-
-This is fixed in `proc-quote`.
-
-### Use `Vec`, arrays and slices in a repeating block without consuming the variable
-
-In `proc-quote`, any type that implements `Borrow<[T]>` inside a repeating pattern
-will iterate without consuming the variable (using the `.iter` method). This includes
-`Vec`, arrays and slices.
-
-This means you no longer need to create ten different variables to iterate the same
-elements in ten different places in your `quote!` macros.
-
-## From `quote` to `proc-quote`
-
-If you are already using the `quote` crate but you want to leverage the advantages of
-`proc-quote`, you can easily switch crates.
+from `quote` to the `proc_quote` crate **should not require any change in the code**.
 
 After changing your `Cargo.toml` dependency, change the following:
 ```rust
@@ -95,38 +51,7 @@ use proc_quote::quote;
 use proc_quote::quote_spanned;
 ```
 
-**Note:** You may also remove `#![recursion_limit="..."]` as it is not needed in the
-procedural macro.
-
-And that's basically it, most of the times! 
-
-However, repeating patterns `#(...)*` **do NOT** work directly with [`IntoIterator`]
-in `proc-quote` (see [`Repeat`] trait). If your type was already an `Iterator` or any
-type implementing <a href="https://doc.rust-lang.org/std/borrow/trait.Borrow.html">
-`Borrow<[T]>`</a> (such as [`Vec`], slices, arrays, ...), your code will work the same 
-as in `quote.`
-
-On the other hand, cases like [`TokenStream`] (implements `IntoIterator` but it is
-not any of the cases stated above) must be explicitely turned into iterators before
-being interpolated. That is, if you had:
-
-```rust
-let a: TokenStream = /* ... */; 
-let q = quote!(#(#a)*);
-```
-
-You must change it to:
-
-```rust
-let a: TokenStream = /* ... */;
-let a = a.into_iter(); 
-let q = quote!(#(#a)*);
-```
-
-This explicitness is necessary because of `proc-quote`'s new features. In this example,
-`TokenStream` would have be seen as a type implementing `ToTokens` instead of an `Iterator`
-of tokens, which makes sense because it is much more frequently used as the former when
-interpolated.
+And that's it!
 
 [`Repeat`]: https://docs.rs/proc-quote/0/proc_quote/trait.Repeat.html
 [`Iterator<T>`]: https://doc.rust-lang.org/std/iter/trait.Iterator.html
