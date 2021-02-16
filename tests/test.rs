@@ -16,8 +16,8 @@ fn test_quote_impl() {
 
     let expected = concat!(
         "impl < 'a , T : ToTokens > ToTokens for & 'a T { ",
-        "fn to_tokens ( & self , tokens : & mut TokenStream ) { ",
-        "( ** self ) . to_tokens ( tokens ) ",
+        "fn to_tokens (& self , tokens : & mut TokenStream) { ",
+        "(** self) . to_tokens (tokens) ",
         "} ",
         "}"
     );
