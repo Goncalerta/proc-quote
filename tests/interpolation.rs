@@ -36,7 +36,7 @@ fn test_substitution() {
     let x = X;
     let tokens = quote!(#x <#x> (#x) [#x] {#x});
 
-    let expected = "X < X > (X) [X] { X }";
+    let expected = "X < X > ( X ) [ X ] { X }";
 
     assert_eq!(expected, tokens.to_string());
 }
@@ -81,10 +81,10 @@ fn test_advanced() {
         "phantom : :: std :: marker :: PhantomData <Cow < 'a , str > >, ",
         "} ",
         "impl < 'a , T > :: serde :: Serialize for SerializeWith < 'a , T > where T : Serialize { ",
-        "fn serialize < S > (& self , s : & mut S) -> Result < () , S :: Error > ",
+        "fn serialize < S > ( & self , s : & mut S ) -> Result < ( ) , S :: Error > ",
         "where S : :: serde :: Serializer ",
         "{ ",
-        "SomeTrait :: serialize_with (self . value , s) ",
+        "SomeTrait :: serialize_with ( self . value , s ) ",
         "} ",
         "} ",
         "SerializeWith { ",
