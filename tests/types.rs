@@ -23,7 +23,7 @@ fn test_integer() {
         #ii8 #ii16 #ii32 #ii64 #iisize
         #uu8 #uu16 #uu32 #uu64 #uusize
     };
-    let expected = "-1i8 -1i16 -1i32 -1i64 -1isize 1u8 1u16 1u32 1u64 1usize";
+    let expected = "- 1i8 - 1i16 - 1i32 - 1i64 - 1isize 1u8 1u16 1u32 1u64 1usize";
     assert_eq!(expected, tokens.to_string());
 }
 
