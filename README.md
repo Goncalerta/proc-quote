@@ -7,7 +7,10 @@ Rust Quasiquoter
 
 This crate implements the [`quote!`] macro as a procedural macro, instead of 
 [the original `quote!` macro](https://github.com/dtolnay/quote), implemented 
-with `macro_rules!`.
+with `macro_rules!`. **Moreover, `proc-quote`
+tried to experiment with techniques to overcome longstanding limitations of the 
+original `quote` crate. Those techniques have since [been incorporated](https://github.com/dtolnay/quote/releases/tag/1.0.0) 
+in the original `quote` crate after a viable solution was found in `proc-quote`.**
 
 The [`quote!`] macro turns Rust syntax tree data structures into tokens of 
 source code.
